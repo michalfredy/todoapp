@@ -19,10 +19,11 @@ app.listen(PORT, () => {
 
 const mongoose = require('mongoose');
 
-mongoose.connect('mongodb+srv://Fredy:Crikvenica@clusterfredy.bdqixna.mongodb.net/todo-app', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
+mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  });
+  
 
 mongoose.connection.on('error', err => {
   console.error('MongoDB connection error:', err);
