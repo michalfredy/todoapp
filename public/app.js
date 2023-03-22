@@ -4,13 +4,33 @@ const taskList = document.getElementById('taskList');
 
 // Fetch tasks from the API
 function fetchTasks() {
+  console.log('Fetching tasks...');
   fetch('/api/tasks')
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(error => {
+          throw new Error(error.error);
+        });
+      }
+      return response.json();
+    })
     .then(tasks => {
+      console.log('Fetched tasks:', tasks);
       taskList.innerHTML = '';
       tasks.forEach(task => {
         const li = document.createElement('li');
-        li.textContent = task.description;
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = task.completed;
+        checkbox.addEventListener('click', () => {
+          toggleTaskCompleted(task._id, !task.completed);
+        });
+        li.appendChild(checkbox);
+
+        const span = document.createElement('span');
+        span.textContent = task.title;
+        li.appendChild(span);
 
         const deleteButton = document.createElement('button');
         deleteButton.textContent = 'Delete';
@@ -21,6 +41,10 @@ function fetchTasks() {
         li.appendChild(deleteButton);
         taskList.appendChild(li);
       });
+    })
+    .catch(error => {
+      console.error('Error fetching tasks:', error.message);
+      console.error('Error details:', error);
     });
 }
 
@@ -31,7 +55,7 @@ addTaskForm.addEventListener('submit', (event) => {
   const taskDescription = taskInput.value.trim();
   if (!taskDescription) return;
 
-  const newTask = { description: taskDescription };
+  const newTask = { title: taskDescription };
 
   fetch('/api/tasks', {
     method: 'POST',
@@ -47,12 +71,47 @@ addTaskForm.addEventListener('submit', (event) => {
 
 // Delete a task
 function deleteTask(taskId) {
-  fetch(`/api/tasks/${taskId}`, { method: 'DELETE' })
-    .then(response => response.json())
-    .then(result => {
-      if (result.success) {
-        fetchTasks();
+  fetch(`/api/tasks/${taskId}`, {
+    method: 'DELETE',
+  })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(error => {
+          throw new Error(error.error);
+        });
       }
+      return response.json();
+    })
+    .then(() => {
+      fetchTasks(); // Fetch tasks after successfully deleting a task
+    })
+    .catch(error => {
+      console.error('Error deleting task:', error.message);
+      console.error('Error details:', error);
+    });
+}
+
+// Toggle a task's completed status
+function toggleTaskCompleted(taskId, completed) {
+  fetch(`/api/tasks/${taskId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ completed })
+  })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(error => {
+          throw new Error(error.error);
+        });
+      }
+      return response.json();
+    })
+    .then(() => {
+      fetchTasks(); // Fetch tasks after successfully updating a task
+    })
+    .catch(error => {
+      console.error('Error updating task:', error.message);
+      console.error('Error details:', error);
     });
 }
 

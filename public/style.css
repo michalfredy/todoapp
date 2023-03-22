@@ -1,3 +1,9 @@
+app.get('/styles.css', (req, res) => {
+    res.set('Content-Type', 'text/css');
+    res.sendFile(path.join(__dirname, 'public', 'styles.css'));
+  });
+  
+
 body {
     font-family: Arial, sans-serif;
     background-color: #f0f0f0;
@@ -27,7 +33,11 @@ body {
     background-color: #007bff;
     color: #fff;
     border: none;
-    padding: 10px;
+    padding: 10px 20px;
     cursor: pointer;
+    margin: 10px;
   }
-  
+
+li input[type=checkbox]:checked + span {
+  text-decoration: line-through;
+}

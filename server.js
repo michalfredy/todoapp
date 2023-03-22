@@ -1,6 +1,15 @@
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
+const Task = require('./models/task');
+
+app.use((req, res, next) => {
+    if (req.url.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    }
+    next();
+  });
+
 
 app.use(express.static('public'));
 
@@ -8,57 +17,68 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-const MongoClient = require('mongodb').MongoClient;
-const uri = "mongodb+srv://Fredy:Crikvenica@clusterfredy.bdqixna.mongodb.net/test";
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+const mongoose = require('mongoose');
 
-let db;
-
-client.connect(err => {
-  if (err) {
-    console.error('Error connecting to MongoDB:', err);
-    return;
-  }
-  console.log('Connected to MongoDB');
-  db = client.db('todo-app');
+mongoose.connect('mongodb+srv://Fredy:Crikvenica@clusterfredy.bdqixna.mongodb.net/todo-app', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
 });
+
+mongoose.connection.on('error', err => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('connected', () => {
+  console.log('MongoDB connected');
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
+
 
 app.use(express.json());
 
 // Get all tasks
-app.get('/api/tasks', (req, res) => {
-  db.collection('tasks').find({}).toArray((err, tasks) => {
-    if (err) {
-      res.status(500).json({ error: 'Error fetching tasks' });
-      return;
+app.get('/api/tasks', async (req, res) => {
+    try {
+      const tasks = await Task.find({});
+      res.status(200).send(tasks);
+    } catch (error) {
+      console.error('Error fetching tasks:', error); // Add this line
+      res.status(500).send({ message: 'Failed to fetch tasks' });
     }
-    res.json(tasks);
   });
-});
-
+  
 // Add a new task
-app.post('/api/tasks', (req, res) => {
-  const task = req.body;
-
-  db.collection('tasks').insertOne(task, (err, result) => {
-    if (err) {
-      res.status(500).json({ error: 'Error adding task' });
-      return;
+app.post('/api/tasks', async (req, res) => {
+    try {
+      const newTask = new Task(req.body);
+      await newTask.save();
+      res.status(201).send(newTask);
+    } catch (error) {
+      console.error('Error creating task:', error); // Add this line
+      res.status(500).send({ message: 'Failed to create task' });
     }
-    res.json(result.ops[0]);
   });
-});
+  
 
 // Delete a task
-app.delete('/api/tasks/:id', (req, res) => {
-  const taskId = req.params.id;
-  const objectId = new require('mongodb').ObjectID(taskId);
-
-  db.collection('tasks').deleteOne({ _id: objectId }, (err, result) => {
-    if (err) {
-      res.status(500).json({ error: 'Error deleting task' });
-      return;
+app.delete('/api/tasks/:id', async (req, res) => {
+    try {
+      await Task.findByIdAndDelete(req.params.id);
+      res.status(200).send({ message: 'Task deleted' });
+    } catch (error) {
+      res.status(500).send({ message: 'Failed to delete task' });
     }
-    res.json({ success: true });
   });
-});
+
+  // PUT: Update a task
+app.put('/api/tasks/:id', async (req, res) => {
+    try {
+      const updatedTask = await Task.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      res.status(200).send(updatedTask);
+    } catch (error) {
+      res.status(500).send({ message: 'Failed to update task' });
+    }
+  });
